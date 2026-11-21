@@ -181,7 +181,8 @@
 
 <script>
   const tg = window.Telegram && window.Telegram.WebApp;
-  const inTelegram = !!(tg && tg.initData);
+  // Forms opened from a chat keyboard button get no initData, so detect Telegram by platform instead.
+  const inTelegram = !!(tg && tg.platform && tg.platform !== "unknown");
 
   const FORMATS = {
     dhl:   { name: "DHL",   re: /^\d{10}$/,                          hint: "DHL Express numbers are usually 10 digits." },
