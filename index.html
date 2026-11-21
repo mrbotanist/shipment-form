@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Add Shipment</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  /* Telegram overrides these with the user's theme; these are fallbacks for a normal browser. */
+  :root {
+    --tg-theme-bg-color: #ffffff;
+    --tg-theme-secondary-bg-color: #f1f2f6;
+    --tg-theme-text-color: #111418;
+    --tg-theme-hint-color: #7d8691;
+    --tg-theme-button-color: #2a8bd8;
+    --tg-theme-button-text-color: #ffffff;
+    --tg-theme-section-bg-color: #ffffff;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --tg-theme-bg-color: #17212b;
+      --tg-theme-secondary-bg-color: #0e1621;
+      --tg-theme-text-color: #f5f5f5;
+      --tg-theme-hint-color: #8a96a3;
+      --tg-theme-button-color: #5288c1;
+      --tg-theme-section-bg-color: #17212b;
+    }
+  }
+  :root {
+    --bg: var(--tg-theme-secondary-bg-color);
+    --card: var(--tg-theme-section-bg-color, var(--tg-theme-bg-color));
+    --text: var(--tg-theme-text-color);
+    --hint: var(--tg-theme-hint-color);
+    --accent: var(--tg-theme-button-color);
+    --accent-text: var(--tg-theme-button-text-color);
+    --line: color-mix(in srgb, var(--hint) 28%, transparent);
+    --warn: #c98a00;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body {
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 20px 16px 32px;
+  }
+  .wrap { max-width: 480px; margin: 0 auto; }
+
+  header { display: flex; align-items: center; gap: 12px; margin: 4px 4px 22px; }
+  .badge {
+    width: 46px; height: 46px; border-radius: 13px; flex: none;
+    display: grid; place-items: center;
+    background: color-mix(in srgb, var(--accent) 16%, transparent);
+    color: var(--accent);
+  }
+  .badge svg { width: 24px; height: 24px; }
+  h1 { font-size: 21px; margin: 0; letter-spacing: -0.2px; }
+  header p { margin: 2px 0 0; color: var(--hint); font-size: 14px; }
+
+  .label {
+    font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;
+    color: var(--hint); margin: 0 4px 8px;
+  }
+  section { margin-bottom: 22px; }
+
+  .carriers { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .carrier {
+    position: relative; border: 2px solid transparent; border-radius: var(--radius);
+    background: var(--card); padding: 14px 6px 12px; cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    font: inherit; color: var(--text);
+    transition: border-color .15s, transform .1s;
+  }
+  .carrier:active { transform: scale(0.97); }
+  .carrier[aria-checked="true"] { border-color: var(--accent); }
+  .logo {
+    width: 100%; max-width: 92px; height: 34px; border-radius: 8px;
+    display: grid; place-items: center; font-weight: 800; font-size: 15px; letter-spacing: 0.3px;
+  }
+  .logo.dhl { background: #ffcc00; color: #d40511; font-style: italic; }
+  .logo.ups { background: #351c15; color: #ffb500; }
+  .logo.fedex { background: #ffffff; color: #4d148c; border: 1px solid #e3e3e8; }
+  .logo.fedex b { color: #ff6600; font-weight: 800; }
+  .carrier span { font-size: 14px; font-weight: 600; }
+  .tick {
+    position: absolute; top: 6px; right: 6px; width: 18px; height: 18px; border-radius: 50%;
+    background: var(--accent); color: var(--accent-text); display: none; place-items: center;
+  }
+  .tick svg { width: 11px; height: 11px; }
+  .carrier[aria-checked="true"] .tick { display: grid; }
+
+  .field {
+    background: var(--card); border-radius: var(--radius);
+    display: flex; align-items: center; padding: 0 14px;
+    border: 2px solid transparent; transition: border-color .15s;
+  }
+  .field:focus-within { border-color: var(--accent); }
+  .field input {
+    flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text);
+    font: inherit; font-size: 17px; padding: 15px 0;
+  }
+  .field input::placeholder { color: var(--hint); opacity: .8; }
+  #number { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; letter-spacing: 0.5px; }
+  .clear {
+    border: 0; background: transparent; color: var(--hint); padding: 6px; margin-right: -6px;
+    cursor: pointer; display: none;
+  }
+  .clear svg { width: 18px; height: 18px; display: block; }
+  .help { font-size: 13px; color: var(--hint); margin: 8px 4px 0; min-height: 18px; }
+  .help.warn { color: var(--warn); }
+
+  .note {
+    display: flex; gap: 10px; align-items: flex-start;
+    font-size: 13px; color: var(--hint); margin: 4px 4px 0;
+  }
+  .note svg { width: 16px; height: 16px; flex: none; margin-top: 1px; }
+
+  #submit {
+    display: none; width: 100%; margin-top: 24px; padding: 15px; border: 0; border-radius: var(--radius);
+    background: var(--accent); color: var(--accent-text); font: inherit; font-weight: 600; cursor: pointer;
+  }
+  #submit:disabled { opacity: .45; cursor: default; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="badge" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/></svg>
+    </div>
+    <div>
+      <h1>New shipment</h1>
+      <p>Scan updates go to your Shipment Updates group.</p>
+    </div>
+  </header>
+
+  <section>
+    <div class="label" id="carrier-label">Carrier</div>
+    <div class="carriers" role="radiogroup" aria-labelledby="carrier-label">
+      <button class="carrier" type="button" role="radio" aria-checked="false" data-carrier="dhl">
+        <span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path d="M5 12l5 5 9-10"/></svg></span>
+        <div class="logo dhl">DHL</div><span>DHL Express</span>
+      </button>
+      <button class="carrier" type="button" role="radio" aria-checked="false" data-carrier="ups">
+        <span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path d="M5 12l5 5 9-10"/></svg></span>
+        <div class="logo ups">UPS</div><span>UPS</span>
+      </button>
+      <button class="carrier" type="button" role="radio" aria-checked="false" data-carrier="fedex">
+        <span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path d="M5 12l5 5 9-10"/></svg></span>
+        <div class="logo fedex">Fed<b>Ex</b></div><span>FedEx</span>
+      </button>
+    </div>
+  </section>
+
+  <section>
+    <label class="label" for="number">Tracking number</label>
+    <div class="field">
+      <input id="number" type="text" inputmode="text" autocomplete="off" autocapitalize="characters"
+             spellcheck="false" maxlength="40" placeholder="e.g. 9631200250">
+      <button class="clear" type="button" id="clear" aria-label="Clear tracking number">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm3.5 12.1l-1.4 1.4L12 13.4l-2.1 2.1-1.4-1.4 2.1-2.1-2.1-2.1 1.4-1.4 2.1 2.1 2.1-2.1 1.4 1.4-2.1 2.1 2.1 2.1z"/></svg>
+      </button>
+    </div>
+    <div class="help" id="number-help">Choose a carrier, then paste or type the number.</div>
+  </section>
+
+  <section>
+    <label class="label" for="name">Shipment name</label>
+    <div class="field">
+      <input id="name" type="text" autocomplete="off" maxlength="100" placeholder="e.g. Office chair">
+    </div>
+    <div class="help">Optional. Shown on every update so you know which parcel it is.</div>
+  </section>
+
+  <div class="note">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+    <div>The bot checks in every 30 minutes, so your confirmation arrives at the next check.</div>
+  </div>
+
+  <button id="submit" type="button" disabled>Add shipment</button>
+</div>
+
+<script>
+  const tg = window.Telegram && window.Telegram.WebApp;
+  const inTelegram = !!(tg && tg.initData);
+
+  const FORMATS = {
+    dhl:   { name: "DHL",   re: /^\d{10}$/,                          hint: "DHL Express numbers are usually 10 digits." },
+    ups:   { name: "UPS",   re: /^1Z[0-9A-Z]{16}$/,                  hint: "UPS numbers usually start with 1Z and have 18 characters." },
+    fedex: { name: "FedEx", re: /^(\d{12}|\d{15}|\d{20}|\d{22})$/,   hint: "FedEx numbers are usually 12, 15, 20 or 22 digits." },
+  };
+
+  const carriers = document.querySelectorAll(".carrier");
+  const number = document.getElementById("number");
+  const nameInput = document.getElementById("name");
+  const help = document.getElementById("number-help");
+  const clearBtn = document.getElementById("clear");
+  const submitBtn = document.getElementById("submit");
+
+  let carrier = null;
+  let carrierChosenByUser = false;
+
+  const clean = (v) => v.toUpperCase().replace(/[^0-9A-Z]/g, "");
+  const isValid = () => {
+    const n = clean(number.value);
+    return !!carrier && n.length >= 8 && n.length <= 35 && /\d/.test(n);
+  };
+
+  function selectCarrier(key, byUser) {
+    carrier = key;
+    if (byUser) carrierChosenByUser = true;
+    carriers.forEach((b) => b.setAttribute("aria-checked", String(b.dataset.carrier === key)));
+    update();
+  }
+
+  function guessCarrier(n) {
+    if (/^1Z/.test(n)) return "ups";
+    if (/^\d{10}$/.test(n)) return "dhl";
+    if (/^(\d{12}|\d{15}|\d{20}|\d{22})$/.test(n)) return "fedex";
+    return null;
+  }
+
+  function update() {
+    const n = clean(number.value);
+    clearBtn.style.display = number.value ? "block" : "none";
+
+    if (!carrierChosenByUser && n) {
+      const guess = guessCarrier(n);
+      if (guess && guess !== carrier) selectCarrier(guess, false);
+    }
+
+    help.classList.remove("warn");
+    if (!carrier) {
+      help.textContent = n ? "Now choose the carrier above." : "Choose a carrier, then paste or type the number.";
+    } else if (!n) {
+      help.textContent = FORMATS[carrier].hint;
+    } else if (n.length < 8) {
+      help.textContent = "That looks too short for a tracking number.";
+      help.classList.add("warn");
+    } else if (!FORMATS[carrier].re.test(n)) {
+      help.textContent = `This doesn't look like a typical ${FORMATS[carrier].name} number. You can still add it, and the bot will check it.`;
+      help.classList.add("warn");
+    } else {
+      help.textContent = `Looks like a valid ${FORMATS[carrier].name} number.`;
+    }
+
+    const ok = isValid();
+    if (inTelegram) {
+      const p = tg.themeParams || {};
+      tg.MainButton.setParams({
+        text: "Add shipment",
+        is_visible: true,
+        is_active: ok,
+        color: ok ? (p.button_color || "#2a8bd8") : (p.hint_color || "#9aa3ad"),
+        text_color: p.button_text_color || "#ffffff",
+      });
+    } else {
+      submitBtn.disabled = !ok;
+    }
+  }
+
+  function submit() {
+    if (!isValid()) return;
+    const data = {
+      carrier,
+      number: clean(number.value),
+      name: nameInput.value.trim().slice(0, 100),
+    };
+    if (inTelegram) {
+      tg.HapticFeedback && tg.HapticFeedback.notificationOccurred("success");
+      tg.sendData(JSON.stringify(data));
+    } else {
+      alert("Open this form from the bot in Telegram to submit.\n\n" + JSON.stringify(data, null, 2));
+    }
+  }
+
+  carriers.forEach((b) => b.addEventListener("click", () => {
+    if (inTelegram && tg.HapticFeedback) tg.HapticFeedback.selectionChanged();
+    selectCarrier(b.dataset.carrier, true);
+    if (!number.value) number.focus();
+  }));
+  number.addEventListener("input", update);
+  number.addEventListener("keydown", (e) => { if (e.key === "Enter") nameInput.focus(); });
+  nameInput.addEventListener("keydown", (e) => { if (e.key === "Enter") { nameInput.blur(); submit(); } });
+  clearBtn.addEventListener("click", () => { number.value = ""; number.focus(); update(); });
+  submitBtn.addEventListener("click", submit);
+
+  if (inTelegram) {
+    tg.ready();
+    tg.expand();
+    tg.MainButton.onClick(submit);
+  } else {
+    submitBtn.style.display = "block";
+  }
+  update();
+</script>
+</body>
+</html>
